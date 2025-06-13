@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Blooma - Detección de Apnea</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0"></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda+SC:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Lexend+Giga:wght@100..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+  <style>
+
+
+.lexend-giga-blooma {
+  font-family: "Lexend Giga", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 100;
+  font-style: normal;
+}
+
+    body {
+      font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+      margin: 0; padding: 0;
+      background-color: #f7f9fc;
+      color: #000;
+    }
+    header {
+      background-color: #004396;
+      color: white;
+      padding: 1.5rem;
+      font-family: "Lexend Giga";
+      text-align: center;
+      font-size: 2rem;
+      font-weight: bold;
+    }
+    #main-screen {
+      max-width: 100%;
+      margin: 1rem auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 12px #ccc;
+    }
+    #form-section{
+        max-width: 600px;
+      margin: 1rem auto;
+      padding: 1rem;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 0 12px #ccc;
+      font-family: "Lexend Giga", sans-serif;
+    }
+    h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+    label {
+      display: block;
+      margin-top: 1rem;
+      font-weight: 600;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.4rem;
+      margin-top: 0.3rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 1.5rem;
+      width: 100%;
+      padding: 0.7rem;
+      background-color: #004396;
+      color: white;
+      border: none;
+      font-size: 1.1rem;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #00306b;
+    }
+
+    .event-list {
+      margin-top: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 0.5rem;
+      border-radius: 6px;
+      background: #f0f4f8;
+    }
+    .event-item {
+      padding: 0.4rem;
+      border-bottom: 1px solid #ccc;
+      display: flex;
+      align-items: center;
+      font-size: 0.9rem;
+    }
+    .event-item:last-child {
+      border-bottom: none;
+    }
+    .event-icon {
+      color: #004396;
+      margin-right: 0.6rem;
+      font-weight: bold;
+    }
+    .info-text {
+      margin-top: 1rem;
+      font-weight: 600;
+      text-align: center;
+      color: #004396;
+    }
+
+.close {
+  position: absolute;
+  top: 0.5rem;
+  right: 1rem;
+  font-size: 2rem;
+  font-weight: bold;
+  cursor: pointer;
+  color: #004396;
+}
+
+.hidden {
+  display: none !important;
+}
+.main-columns {
+  display: flex;
+  flex-direction: row;
+  gap: 2rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap; /* para que en pantallas chicas se acomode */
+}
+
+.left-column, .right-column {
+  flex: 1 1 300px;
+  min-width: 280px;
+}
+
+.right-column {
+  flex: 2 1 600px;  /* Más espacio que la izquierda */
+  text-align: center;
+  background: #eef3fa;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 0 10px #ccc;
+}
+
+#graficoAceleracion {
+  max-width: 100%;
+  width: 100%;      /* Que ocupe todo el ancho posible */
+  height: 300px;    /* Alto fijo más grande */
+  display: block;
+  margin: 0 auto;
+}
+h2{
+  color:#073773;
+  font-size: 30px;
+}
+#patient-form{
+  color:#073773;
+  font-size: 20px;
+}
+
+  </style>
+</head>
+<body>
+
+<header>B L O O M A</header>
+
+<main>
+  <!-- Formulario -->
+  <section id="form-section">
+    <h2>DATOS DEL PACIENTE</h2>
+    <form id="patient-form" novalidate>
+      <label for="nombre">Nombre</label>
+      <input id="nombre" name="nombre" required />
+
+      <label for="apellido">Apellido</label>
+      <input id="apellido" name="apellido" required />
+
+      <label for="sexo">Sexo:</label>
+  <select id="sexo" name="sexo" required>
+    <option value="" disabled selected>Seleccione una opción</option>
+    <option value="masculino">Masculino</option>
+    <option value="femenino">Femenino</option>
+    <option value="otro">Otro</option>
+  </select>
+
+  <label for="peso">Peso (kg):</label>
+  <input type="number" id="peso" name="peso" min="0" step="0.1" required>
+
+  <label for="altura">Altura (cm):</label>
+  <input type="number" id="altura" name="altura" min="0" step="0.1" required>
+
+      <button type="button" id="connect-btn">Conectar ESP32 vía WiFi</button>
+      <div id="connect-error" style="color: #004396; margin-top: 0.5rem; display: none;"></div>
+
+      <button type="submit" id="start-monitoring-btn" disabled>Comenzar Monitoreo</button>
+    </form>
+  </section>
+
+  <!-- Pantalla principal -->
+  <section id="main-screen" class="hidden">
+    <div class="main-columns">
+  <!-- Columna izquierda: eventos y botones -->
+  <div class="left-column">
+    <h2>Paciente: <span id="paciente-nombre"></span></h2>
+    <div class="info-text" id="event-count">Eventos detectados: 0</div>
+    <button id="add-event-btn" style="background-color: teal;">Agregar Evento Manual</button>
+
+    <div class="event-list" id="event-list"></div>
+
+    <button id="volver-btn" style="margin-top: 1rem; background-color: #004396;">Volver al formulario</button>
+
+
+  </div>
+
+  <!-- Columna derecha: gráfico -->
+  <div class="right-column">
+    <h3 style=>Aceleración Z en tiempo real</h3>
+  <canvas id="graficoAceleracion" width="600" height="300"></canvas>
+  <button onclick="descargarGraficoAceleracion()" style="margin-top: 0.5rem;">Descargar gráfico</button>
+    <h3>Eventos por hora - <span id="fecha-grafico"></span></h3>
+    <canvas id="graficoEventos" width="200" height="100"></canvas>
+    <button onclick="descargarGrafico()" style="margin-top: 0.5rem;">Descargar gráfico</button>
+
+  </div>
+  </div>
+  </section>
+
+  
+</main>
+
+<script>
+  const form = document.getElementById('patient-form');
+  const formSection = document.getElementById('form-section');
+  const mainScreen = document.getElementById('main-screen');
+  const pacienteNombreSpan = document.getElementById('paciente-nombre');
+  const eventCountDiv = document.getElementById('event-count');
+  const eventListDiv = document.getElementById('event-list');
+  const addEventBtn = document.getElementById('add-event-btn');
+  const volverBtn = document.getElementById('volver-btn');
+
+  const connectBtn = document.getElementById('connect-btn');
+  const startMonitoringBtn = document.getElementById('start-monitoring-btn');
+  const connectErrorDiv = document.getElementById('connect-error');
+
+  let eventos = [];
+  let socket = null;
+  let isConnected = false;
+  let offsetZ = 0; // offset inicial, lo estableceremos cuando lo recibamos
+  let minZ = null;
+  let maxZ = null;
+  let margen = 0.5; // 10% de margen
+
+  // Inicialmente botón comenzar monitoreo deshabilitado
+  startMonitoringBtn.disabled = true;
+
+  connectBtn.addEventListener('click', () => {
+    if (socket) return; // Ya conectado o en proceso
+    connectErrorDiv.style.display = 'none';
+    connectErrorDiv.textContent = '';
+    connectBtn.textContent = 'Conectando...';
+    connectBtn.disabled = true;
+    connectWebSocket();
+  });
+
+  function connectWebSocket() {
+    const ip = '192.168.0.206';
+    const port = 81;
+
+    socket = new WebSocket(`ws://${ip}:${port}/ws`);
+
+    socket.onopen = () => {
+      connectErrorDiv.style.display = 'none';
+      connectErrorDiv.textContent = '';
+      connectBtn.textContent = 'Conectado ✅';
+      connectBtn.disabled = true;
+      isConnected = true;
+      startMonitoringBtn.disabled = false; // Habilita iniciar monitoreo
+    };
+
+   socket.onmessage = (event) => {
+  const data = JSON.parse(event.data);
+  console.log('Mensaje recibido:', data);
+
+  if (data.evento === 'apnea_detectada') {
+    agregarEventoWebSocket();
+  }
+
+  if (data.offset_z !== undefined) {
+    offsetZ = data.offset_z;
+    console.log("Offset Z recibido:", offsetZ);
+  }
+
+  if (data.max_z !== undefined) {
+    maxZ = data.max_z - offsetZ;
+    console.log("Max Z recibido y ajustado:", maxZ);
+  }
+
+  if (data.min_z !== undefined) {
+    minZ = data.min_z - offsetZ;
+    console.log("Min Z recibido y ajustado:", minZ);
+  }
+
+  if (maxZ !== null && minZ !== null) {
+    const rango = maxZ - minZ;
+    const limiteSuperior = maxZ  *2;
+    const limiteInferior = minZ  *1.5;
+    aceleracionChart.options.scales.y.min = limiteInferior;
+    aceleracionChart.options.scales.y.max = limiteSuperior;
+
+    aceleracionChart.update();
+  }
+
+  if (data.aceleracion_z !== undefined) {
+    const valorAjustado = data.aceleracion_z - offsetZ;
+    agregarDatoAceleracion(valorAjustado);
+  }
+};
+
+
+    socket.onerror = (error) => {
+      connectErrorDiv.style.display = 'block';
+      connectErrorDiv.textContent = 'Error al conectar con ESP32. Intenta de nuevo.';
+      connectBtn.textContent = 'Conectar ESP32 vía WiFi';
+      connectBtn.disabled = false;
+      socket.close();
+      socket = null;
+      isConnected = false;
+      startMonitoringBtn.disabled = true;
+    };
+
+    socket.onclose = () => {
+      if (!isConnected) {
+        connectErrorDiv.style.display = 'block';
+        connectErrorDiv.textContent = 'No se pudo establecer conexión con ESP32.';
+      }
+      connectBtn.textContent = 'Conectar ESP32 vía WiFi';
+      connectBtn.disabled = false;
+      socket = null;
+      isConnected = false;
+      startMonitoringBtn.disabled = true;
+    };
+  
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+
+    if (!isConnected) {
+      connectErrorDiv.style.display = 'block';
+      connectErrorDiv.textContent = 'Debes conectar el ESP32 antes de comenzar el monitoreo.';
+      return;
+    }
+
+    if (form.checkValidity()) {
+      const nombre = form.nombre.value.trim();
+      const apellido = form.apellido.value.trim();
+      pacienteNombreSpan.textContent = `${nombre} ${apellido}`;
+
+      eventos = [];
+      actualizarEventos();
+
+      formSection.classList.add('hidden');
+      mainScreen.classList.remove('hidden');
+      inicializarGrafico();
+      inicializarGraficoAceleracion();
+    } else {
+      form.reportValidity();
+    }
+  });
+  }
+  function actualizarEventos() {
+    eventCountDiv.textContent = `Eventos detectados: ${eventos.length}`;
+    eventListDiv.innerHTML = '';
+
+    eventos.forEach((evento, i) => {
+      const div = document.createElement('div');
+      div.classList.add('event-item');
+      div.innerHTML = `<span class="event-icon">✅</span> Evento ${i + 1} - ${evento.toLocaleString()}`;
+      eventListDiv.appendChild(div);
+    });
+
+    actualizarGrafico();
+  }
+
+  addEventBtn.addEventListener('click', () => {
+    eventos.push(new Date());
+    actualizarEventos();
+  });
+
+  volverBtn.addEventListener('click', () => {
+    mainScreen.classList.add('hidden');
+    formSection.classList.remove('hidden');
+    eventos = [];
+    actualizarEventos();
+    if(socket){
+      socket.close();
+      socket = null;
+    }
+    isConnected = false;
+    startMonitoringBtn.disabled = true;
+    connectBtn.textContent = 'Conectar ESP32 vía WiFi';
+    connectBtn.disabled = false;
+    connectErrorDiv.style.display = 'none';
+    connectErrorDiv.textContent = '';
+  });
+
+  // Gráfico con Chart.js
+  let chart = null;
+
+  function inicializarGrafico() {
+    const ctx = document.getElementById('graficoEventos').getContext('2d');
+    if (chart) {
+      chart.destroy();
+    }
+
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Eventos por hora',
+          data: [],
+          backgroundColor: 'rgba(0, 67, 150, 0.7)'
+        }]
+      },
+      options: {
+        scales: {
+          y: {
+            beginAtZero: true,
+            precision: 0,
+            stepSize: 1
+          }
+        }
+      }
+    });
+
+    actualizarGrafico();
+  }
+
+  function actualizarGrafico() {
+    if (!chart) return;
+    // Contar eventos por hora (0-23)
+    let conteoPorHora = Array(24).fill(0);
+    eventos.forEach(ev => {
+      conteoPorHora[ev.getHours()]++;
+    });
+
+    // Labels: horas 0-23
+    chart.data.labels = [...Array(24).keys()].map(h => `${h}:00`);
+
+    chart.data.datasets[0].data = conteoPorHora;
+
+    const hoy = new Date();
+    document.getElementById('fecha-grafico').textContent = hoy.toLocaleDateString();
+
+    chart.update();
+  }
+
+  // Descargar gráfico como imagen JPG
+  function descargarGrafico() {
+    if (!chart) return;
+    const link = document.createElement('a');
+    link.download = 'grafico_eventos.jpg';
+    link.href = chart.toBase64Image('image/jpeg', 1);
+    link.click();
+  }
+
+  // Evento recibido vía WebSocket
+  function agregarEventoWebSocket() {
+    eventos.push(new Date());
+    actualizarEventos();
+  }
+
+  let aceleracionChart = null;
+  let aceleracionData = [];
+  let tiempoData = [];
+  const maxPuntos = 800;
+
+  function inicializarGraficoAceleracion() {
+  const ctx = document.getElementById('graficoAceleracion').getContext('2d');
+  if (aceleracionChart) aceleracionChart.destroy();
+  aceleracionChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: tiempoData,
+      datasets: [{
+        label: 'Aceleración Z (g)',
+        data: aceleracionData,
+        borderColor: 'rgba(255, 99, 132, 1)',
+        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        tension: 0.3,
+        pointRadius: 0
+      }]
+    },
+    options: {
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Tiempo HH:MM:SS'
+          }
+        },
+        y: {
+          title: {
+            display: true,
+            text: 'Aceleración Z (g)'
+          },
+        }
+      }
+    }
+  });
+}
+function agregarDatoAceleracion(z) {
+  console.log('Valor ajustado:', z);
+  console.log('Límites Y -> min:', aceleracionChart.options.scales.y.min, 'max:', aceleracionChart.options.scales.y.max);
+
+  const ahora = new Date().toLocaleTimeString();
+
+  // Agregar nuevo dato y tiempo
+  tiempoData.push(ahora);
+  aceleracionData.push(z);
+
+  // Mantener máximo de puntos para no saturar el gráfico
+  if (tiempoData.length > maxPuntos) {
+    tiempoData.shift();
+    aceleracionData.shift();
+  }
+
+  // Actualizar gráfico
+  if (aceleracionChart) {
+    aceleracionChart.data.labels = tiempoData;
+    aceleracionChart.data.datasets[0].data = aceleracionData;
+    aceleracionChart.update('none'); // update sin animación para tiempo real
+  }
+}
+function descargarGraficoAceleracion() {
+  if (!aceleracionChart) return;
+  const link = document.createElement('a');
+  link.download = 'grafico_aceleracion_z.jpg';
+  link.href = aceleracionChart.toBase64Image('image/jpeg', 1);
+  link.click();
+}
+
+
+
+</script>
+
+</body>
+</html>
